@@ -58,8 +58,7 @@ app.use(shareRoutes);
 app.use(adminRoutes);
 
 // Route non trouvée
-// changement depuis express 5
-app.all("/*splat", (_req: Request, res: Response) => {
+app.all("/*", (_req: Request, res: Response) => {
   res.status(404).json({ message: "This route does not exist" });
 });
 
