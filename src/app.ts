@@ -24,7 +24,7 @@ const allowedOrigins: string[] = [
 
 app.use(
   cors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: process.env.FRONTEND_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
@@ -37,6 +37,7 @@ app.use(
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   })
 );
+app.options("*", cors());
 
 // Routes de base
 app.get("/", (_req: Request, res: Response) => {
