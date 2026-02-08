@@ -15,7 +15,21 @@ import adminRoutes from "./routes/admin.routes";
 
 const app = express();
 
-app.use(cors());
+// Configuration CORS flexible via variables d'environnement
+const allowedOrigins: string[] = [
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL_DEV,
+  process.env.CORS_ORIGIN,
+].filter((origin): origin is string => Boolean(origin));
+
+app.use(
+  cors({
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
+);
 app.use(express.json({ limit: "10mb" }));
 // Middleware pour gérer l'upload de fichiers
 app.use(
