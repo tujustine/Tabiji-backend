@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "prisma migrate deploy && node dist/index.js",
     "dev": "tsx watch index.ts",
-    "build": "prisma generate && prisma migrate deploy && npm run build:app",
+    "build": "prisma generate && tsc",
     "postbuild": "cp src/generated/prisma/libquery_engine-*.node dist/src/generated/prisma/",
     "test": "jest",
     "test:watch": "jest --watch",
