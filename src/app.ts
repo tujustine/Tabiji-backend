@@ -57,7 +57,7 @@ app.use(shareRoutes);
 app.use(adminRoutes);
 
 // Route non trouvée
-app.all("*", (_req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
   res.status(404).json({ message: "This route does not exist" });
 });
 
