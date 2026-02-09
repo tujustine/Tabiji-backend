@@ -37,7 +37,6 @@ app.use(
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   })
 );
-app.options("*", cors());
 
 // Routes de base
 app.get("/", (_req: Request, res: Response) => {
