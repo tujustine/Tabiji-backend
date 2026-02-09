@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch index.ts",
-    "build": "tsc",
+    "build": "prisma generate && prisma migrate deploy && npm run build:app",
     "postbuild": "cp src/generated/prisma/libquery_engine-*.node dist/src/generated/prisma/",
     "test": "jest",
     "test:watch": "jest --watch",

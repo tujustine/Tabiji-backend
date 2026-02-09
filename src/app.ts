@@ -15,7 +15,6 @@ import adminRoutes from "./routes/admin.routes";
 
 const app = express();
 
-// Configuration CORS flexible via variables d'environnement
 const allowedOrigins: string[] = [
   process.env.FRONTEND_URL,
   process.env.FRONTEND_URL_DEV,
@@ -24,7 +23,7 @@ const allowedOrigins: string[] = [
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: ["site--tabiji-backend--vwz87zgmls6f.code.run"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
