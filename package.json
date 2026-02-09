@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "scripts": {
-    "start": "prisma generate && node dist/index.js",
+    "start": "prisma generate && prisma migrate deploy && node dist/index.js",
     "dev": "tsx watch index.ts",
     "build": "tsc",
     "postbuild": "cp src/generated/prisma/libquery_engine-*.node dist/src/generated/prisma/",
