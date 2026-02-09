@@ -11,7 +11,6 @@ CREATE TABLE "users" (
     "hash" TEXT NOT NULL,
     "admin" BOOLEAN NOT NULL DEFAULT false,
     "profilePhoto" TEXT,
-    "scratchedCountries" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -22,15 +21,10 @@ CREATE TABLE "users" (
 CREATE TABLE "trips" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
-    "description" TEXT DEFAULT '',
-    "destination" TEXT DEFAULT '',
     "startDate" TIMESTAMP(3) NOT NULL,
     "endDate" TIMESTAMP(3) NOT NULL,
     "image" TEXT DEFAULT '',
-    "budget" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "participants" TEXT[],
-    "activities" JSONB,
-    "isFavorite" BOOLEAN NOT NULL DEFAULT false,
     "ownerId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -77,28 +71,43 @@ CREATE TABLE "media" (
 );
 
 -- CreateTable
-CREATE TABLE "places" (
+CREATE TABLE "place_data" (
     "id" TEXT NOT NULL,
+    "tripId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "address" TEXT,
     "coordinates" JSONB,
     "category" TEXT,
     "description" TEXT,
-    "googlePlaceId" TEXT,
-    "countryCode" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "places_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "place_data_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "trip_places" (
+CREATE TABLE "todo_items" (
     "id" TEXT NOT NULL,
     "tripId" TEXT NOT NULL,
-    "placeId" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "completed" BOOLEAN NOT NULL DEFAULT false,
+    "order" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "trip_places_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "todo_items_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "day_schedules" (
+    "id" TEXT NOT NULL,
+    "tripId" TEXT NOT NULL,
+    "day" INTEGER NOT NULL,
+    "date" TIMESTAMP(3),
+    "placeIds" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "day_schedules_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -106,12 +115,32 @@ CREATE TABLE "share_links" (
     "id" TEXT NOT NULL,
     "tripId" TEXT NOT NULL,
     "token" TEXT NOT NULL,
+    "role" "CollaboratorRole" NOT NULL DEFAULT 'VIEWER',
     "scope" TEXT NOT NULL DEFAULT 'memories:read',
-    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "expiresAt" TIMESTAMP(3),
     "createdBy" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "share_links_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "user_favorite_trips" (
+    "userId" TEXT NOT NULL,
+    "tripId" TEXT NOT NULL,
+
+    CONSTRAINT "user_favorite_trips_pkey" PRIMARY KEY ("userId","tripId")
+);
+
+-- CreateTable
+CREATE TABLE "user_recent_trips" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "tripId" TEXT NOT NULL,
+    "viewedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "user_recent_trips_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -124,13 +153,10 @@ CREATE UNIQUE INDEX "users_token_key" ON "users"("token");
 CREATE UNIQUE INDEX "trip_collaborators_userId_tripId_key" ON "trip_collaborators"("userId", "tripId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "places_googlePlaceId_key" ON "places"("googlePlaceId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "trip_places_tripId_placeId_key" ON "trip_places"("tripId", "placeId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "share_links_token_key" ON "share_links"("token");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_recent_trips_userId_tripId_key" ON "user_recent_trips"("userId", "tripId");
 
 -- AddForeignKey
 ALTER TABLE "trips" ADD CONSTRAINT "trips_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -148,10 +174,25 @@ ALTER TABLE "memories" ADD CONSTRAINT "memories_tripId_fkey" FOREIGN KEY ("tripI
 ALTER TABLE "media" ADD CONSTRAINT "media_memoryId_fkey" FOREIGN KEY ("memoryId") REFERENCES "memories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "trip_places" ADD CONSTRAINT "trip_places_tripId_fkey" FOREIGN KEY ("tripId") REFERENCES "trips"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "place_data" ADD CONSTRAINT "place_data_tripId_fkey" FOREIGN KEY ("tripId") REFERENCES "trips"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "trip_places" ADD CONSTRAINT "trip_places_placeId_fkey" FOREIGN KEY ("placeId") REFERENCES "places"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "todo_items" ADD CONSTRAINT "todo_items_tripId_fkey" FOREIGN KEY ("tripId") REFERENCES "trips"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "day_schedules" ADD CONSTRAINT "day_schedules_tripId_fkey" FOREIGN KEY ("tripId") REFERENCES "trips"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "share_links" ADD CONSTRAINT "share_links_tripId_fkey" FOREIGN KEY ("tripId") REFERENCES "trips"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_favorite_trips" ADD CONSTRAINT "user_favorite_trips_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_favorite_trips" ADD CONSTRAINT "user_favorite_trips_tripId_fkey" FOREIGN KEY ("tripId") REFERENCES "trips"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_recent_trips" ADD CONSTRAINT "user_recent_trips_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user_recent_trips" ADD CONSTRAINT "user_recent_trips_tripId_fkey" FOREIGN KEY ("tripId") REFERENCES "trips"("id") ON DELETE CASCADE ON UPDATE CASCADE;

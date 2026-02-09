@@ -1,0 +1,180 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CollaboratorRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id             String             @id @default(cuid())
+  email          String             @unique
+  username       String
+  token          String             @unique
+  salt           String
+  hash           String
+  admin          Boolean            @default(false)
+  profilePhoto   String?
+  tripsOwned     Trip[]             @relation("TripOwner")
+  collaborations TripCollaborator[]
+  favoriteTrips  UserFavoriteTrip[] @relation("UserFavorites")
+  recentTrips    UserRecentTrip[]   @relation("UserRecentTrips")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@map("users")
+}
+
+model Trip {
+  id            String             @id @default(cuid())
+  title         String
+  startDate     DateTime
+  endDate       DateTime
+  image         String?            @default("")
+  participants  String[]
+  owner         User               @relation("TripOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId       String
+  memories      Memory[]
+  places        PlaceData[]
+  todoItems     TodoItem[]
+  daySchedules  DaySchedule[]
+  collaborators TripCollaborator[]
+  shareLinks    ShareLink[]
+  favoritedBy   UserFavoriteTrip[] @relation("TripFavorites")
+  viewedBy      UserRecentTrip[]   @relation("TripRecentViews")
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@map("trips")
+}
+
+model TripCollaborator {
+  id        String           @id @default(cuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  trip      Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  role      CollaboratorRole @default(VIEWER)
+  createdAt DateTime         @default(now())
+
+  @@unique([userId, tripId])
+  @@map("trip_collaborators")
+}
+
+model Memory {
+  id        String   @id @default(cuid())
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  type      String // "text" | "image" | "video"
+  content   String
+  position  Json // { x: number, y: number }
+  size      Json // { width: number, height: number }
+  zIndex    Int      @default(0)
+  media     Media[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("memories")
+}
+
+model Media {
+  id        String   @id @default(cuid())
+  url       String
+  provider  String? // "cloudinary"
+  publicId  String? // cloudinary public id
+  memory    Memory   @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  memoryId  String
+  createdAt DateTime @default(now())
+
+  @@map("media")
+}
+
+model PlaceData {
+  id          String   @id @default(cuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name        String
+  address     String?
+  coordinates Json? // { lat: number, lng: number }
+  category    String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@map("place_data")
+}
+
+model TodoItem {
+  id        String   @id @default(cuid())
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  text      String
+  completed Boolean  @default(false)
+  order     Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("todo_items")
+}
+
+model DaySchedule {
+  id        String    @id @default(cuid())
+  trip      Trip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  day       Int
+  date      DateTime?
+  placeIds  String[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("day_schedules")
+}
+
+model ShareLink {
+  id        String           @id @default(cuid())
+  trip      Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  token     String           @unique
+  role      CollaboratorRole @default(VIEWER)
+  scope     String           @default("memories:read")
+  expiresAt DateTime?
+  createdBy String
+  createdAt DateTime         @default(now())
+
+  @@map("share_links")
+}
+
+model UserFavoriteTrip {
+  userId String
+  tripId String
+
+  user User @relation("UserFavorites", fields: [userId], references: [id], onDelete: Cascade)
+  trip Trip @relation("TripFavorites", fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tripId])
+  @@map("user_favorite_trips")
+}
+
+model UserRecentTrip {
+  id        String   @id @default(cuid())
+  user      User     @relation("UserRecentTrips", fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  trip      Trip     @relation("TripRecentViews", fields: [tripId], references: [id], onDelete: Cascade)
+  tripId    String
+  viewedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@unique([userId, tripId])
+  @@map("user_recent_trips")
+}
