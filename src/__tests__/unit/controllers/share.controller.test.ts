@@ -6,7 +6,16 @@ import { Request, Response } from "express";
 import { shareController } from "../../../controllers/share.controller";
 import { shareService } from "../../../services/share.service";
 
-jest.mock("../../../services/share.service");
+jest.mock("../../../services/share.service", () => ({
+  shareService: {
+    createShareLink: jest.fn(),
+    getShareLinkInfo: jest.fn(),
+    getSharedMemories: jest.fn(),
+    joinTripViaShareLink: jest.fn(),
+    getShareLinksByTrip: jest.fn(),
+    deleteShareLink: jest.fn(),
+  },
+}));
 
 describe("shareController", () => {
   let mockReq: Partial<Request>;

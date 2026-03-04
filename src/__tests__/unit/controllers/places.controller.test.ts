@@ -6,7 +6,11 @@ import { Request, Response } from "express";
 import { placesController } from "../../../controllers/places.controller";
 import { placesService } from "../../../services/places.service";
 
-jest.mock("../../../services/places.service");
+jest.mock("../../../services/places.service", () => ({
+  placesService: {
+    searchPlaces: jest.fn(),
+  },
+}));
 
 describe("placesController", () => {
   let mockReq: Partial<Request>;

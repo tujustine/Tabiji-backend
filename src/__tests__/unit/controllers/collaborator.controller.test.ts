@@ -6,7 +6,15 @@ import { Request, Response } from "express";
 import { collaboratorController } from "../../../controllers/collaborator.controller";
 import { collaboratorService } from "../../../services/collaborator.service";
 
-jest.mock("../../../services/collaborator.service");
+jest.mock("../../../services/collaborator.service", () => ({
+  collaboratorService: {
+    addCollaborator: jest.fn(),
+    getCollaboratorsByTrip: jest.fn(),
+    updateCollaborator: jest.fn(),
+    deleteCollaborator: jest.fn(),
+    leaveTrip: jest.fn(),
+  },
+}));
 
 describe("collaboratorController", () => {
   let mockReq: Partial<Request>;

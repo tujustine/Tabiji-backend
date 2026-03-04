@@ -160,7 +160,7 @@ export const userService = {
       select: { tripId: true },
     });
 
-    return favorites.map((f) => f.tripId);
+    return favorites.map((f: { tripId: string }) => f.tripId);
   },
 
   /**
@@ -243,7 +243,7 @@ export const userService = {
       take: 10,
     });
 
-    return recentTrips.map((rt) => ({
+    return recentTrips.map((rt: { tripId: string; viewedAt: Date }) => ({
       id: rt.tripId,
       viewedAt: rt.viewedAt.toISOString(),
     }));
@@ -289,7 +289,7 @@ export const userService = {
       await prisma.userRecentTrip.deleteMany({
         where: {
           id: {
-            in: toDelete.map((rt) => rt.id),
+            in: toDelete.map((rt: { id: string }) => rt.id),
           },
         },
       });

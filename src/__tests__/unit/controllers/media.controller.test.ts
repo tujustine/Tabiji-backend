@@ -7,7 +7,12 @@ import { UploadedFile } from "express-fileupload";
 import { mediaController } from "../../../controllers/media.controller";
 import { mediaService } from "../../../services/media.service";
 
-jest.mock("../../../services/media.service");
+jest.mock("../../../services/media.service", () => ({
+  mediaService: {
+    searchAvatars: jest.fn(),
+    uploadMemoryMedia: jest.fn(),
+  },
+}));
 
 describe("mediaController", () => {
   let mockReq: Partial<Request>;

@@ -26,11 +26,21 @@ jest.mock("../../../middlewares/checkTripAccess", () => ({
   }),
 }));
 
+// Mock du service share
+jest.mock("../../../services/share.service", () => ({
+  shareService: {
+    createShareLink: jest.fn(),
+    getShareLinkInfo: jest.fn(),
+    getSharedMemories: jest.fn(),
+    joinTripViaShareLink: jest.fn(),
+    getShareLinksByTrip: jest.fn(),
+    deleteShareLink: jest.fn(),
+  },
+}));
+
 // Import de l'app APRÈS les mocks
 import app from "../../../app";
 import { shareService } from "../../../services/share.service";
-
-jest.mock("../../../services/share.service");
 
 describe("Share Routes (avec mocks)", () => {
   let mockPrisma: any;

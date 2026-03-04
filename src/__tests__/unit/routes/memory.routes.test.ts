@@ -34,11 +34,21 @@ jest.mock("../../../socket/io", () => ({
   })),
 }));
 
+// Mock du service memory
+jest.mock("../../../services/memory.service", () => ({
+  memoryService: {
+    createMemory: jest.fn(),
+    getMemoriesByTrip: jest.fn(),
+    getMemoryById: jest.fn(),
+    checkMemoryPermission: jest.fn(),
+    updateMemory: jest.fn(),
+    deleteMemory: jest.fn(),
+  },
+}));
+
 // Import de l'app APRÈS les mocks
 import app from "../../../app";
 import { memoryService } from "../../../services/memory.service";
-
-jest.mock("../../../services/memory.service");
 
 describe("Memory Routes (avec mocks)", () => {
   let mockPrisma: any;

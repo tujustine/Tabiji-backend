@@ -26,11 +26,20 @@ jest.mock("../../../middlewares/checkTripAccess", () => ({
   }),
 }));
 
+// Mock du service collaborator
+jest.mock("../../../services/collaborator.service", () => ({
+  collaboratorService: {
+    addCollaborator: jest.fn(),
+    getCollaboratorsByTrip: jest.fn(),
+    updateCollaborator: jest.fn(),
+    deleteCollaborator: jest.fn(),
+    leaveTrip: jest.fn(),
+  },
+}));
+
 // Import de l'app APRÈS les mocks
 import app from "../../../app";
 import { collaboratorService } from "../../../services/collaborator.service";
-
-jest.mock("../../../services/collaborator.service");
 
 describe("Collaborator Routes (avec mocks)", () => {
   let mockPrisma: any;

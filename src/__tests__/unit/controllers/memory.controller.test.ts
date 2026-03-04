@@ -7,7 +7,16 @@ import { memoryController } from "../../../controllers/memory.controller";
 import { memoryService } from "../../../services/memory.service";
 import { getIO } from "../../../socket/io";
 
-jest.mock("../../../services/memory.service");
+jest.mock("../../../services/memory.service", () => ({
+  memoryService: {
+    createMemory: jest.fn(),
+    getMemoriesByTrip: jest.fn(),
+    getMemoryById: jest.fn(),
+    checkMemoryPermission: jest.fn(),
+    updateMemory: jest.fn(),
+    deleteMemory: jest.fn(),
+  },
+}));
 jest.mock("../../../socket/io", () => ({
   getIO: jest.fn(() => ({
     to: jest.fn().mockReturnThis(),

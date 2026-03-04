@@ -40,6 +40,11 @@ jobs:
         run: |
           echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/tabiji_test" > .env.test
 
+      - name: Generate Prisma client
+        run: yarn prisma generate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tabiji_test
+
       - name: Run unit tests
         run: yarn test:unit
 

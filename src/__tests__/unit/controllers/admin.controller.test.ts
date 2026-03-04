@@ -6,7 +6,25 @@ import { Request, Response } from "express";
 import { adminController } from "../../../controllers/admin.controller";
 import { adminService } from "../../../services/admin.service";
 
-jest.mock("../../../services/admin.service");
+jest.mock("../../../services/admin.service", () => ({
+  adminService: {
+    getGlobalStats: jest.fn(),
+    getUserStats: jest.fn(),
+    getTripStats: jest.fn(),
+    getUsers: jest.fn(),
+    getUserById: jest.fn(),
+    updateUser: jest.fn(),
+    toggleAdmin: jest.fn(),
+    deleteUser: jest.fn(),
+    getTrips: jest.fn(),
+    getTripById: jest.fn(),
+    deleteTrip: jest.fn(),
+    getMemories: jest.fn(),
+    deleteMemory: jest.fn(),
+    getMedia: jest.fn(),
+    deleteMedia: jest.fn(),
+  },
+}));
 
 describe("adminController", () => {
   let mockReq: Partial<Request>;

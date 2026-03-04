@@ -1,4 +1,6 @@
 import prisma from "../config/prisma";
+import type { Prisma } from "../generated/prisma/client";
+import type { PlaceData, TodoItem, DaySchedule, Trip } from "../generated/prisma/client";
 import { AppError } from "../utils/error.util";
 import type { CreateTripInput, UpdateTripInput } from "../schemas/trip.schema";
 
@@ -72,7 +74,7 @@ export const tripService = {
       },
     });
 
-    return trips.map((trip) => ({
+    return trips.map((trip: Trip & { places: PlaceData[]; todoItems: TodoItem[]; daySchedules: DaySchedule[] }) => ({
       ...trip,
       places: trip.places,
       todoItems: trip.todoItems || [],
@@ -146,7 +148,7 @@ export const tripService = {
     if (data.participants !== undefined) updateData.participants = data.participants;
 
     // Utiliser une transaction pour garantir la cohérence
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // Mettre à jour les todoItems
       if (data.todoItems !== undefined) {
         await tx.todoItem.deleteMany({

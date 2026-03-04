@@ -105,7 +105,7 @@ export const adminService = {
     });
 
     const monthlyStats: Record<string, number> = {};
-    usersByMonth.forEach((user) => {
+    usersByMonth.forEach((user: { createdAt: Date }) => {
       const month = user.createdAt.toISOString().substring(0, 7);
       monthlyStats[month] = (monthlyStats[month] || 0) + 1;
     });
@@ -157,7 +157,7 @@ export const adminService = {
 
     const monthlyStats: Record<string, number> = {};
 
-    tripsByMonth.forEach((trip) => {
+    tripsByMonth.forEach((trip: { createdAt: Date }) => {
       const month = trip.createdAt.toISOString().substring(0, 7);
       monthlyStats[month] = (monthlyStats[month] || 0) + 1;
     });
