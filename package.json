@@ -5,8 +5,8 @@
   "scripts": {
     "start": "prisma generate && prisma migrate deploy && node dist/index.js",
     "dev": "tsx watch index.ts",
-    "build": "tsc",
-    "postbuild": "cp src/generated/prisma/libquery_engine-*.node dist/src/generated/prisma/",
+    "build": "prisma generate && tsc",
+    "postbuild": "mkdir -p dist/src/generated && cp -r src/generated/prisma dist/src/generated/",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
