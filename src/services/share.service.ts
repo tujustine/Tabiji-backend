@@ -10,7 +10,7 @@ export const shareService = {
   async createShareLink(
     tripId: string,
     userId: string,
-    data: CreateShareLinkInput
+    data: CreateShareLinkInput,
   ) {
     const token = generateToken();
 
@@ -61,46 +61,6 @@ export const shareService = {
         owner: shareLink.trip.owner,
         shareRole: shareLink.role,
       },
-    };
-  },
-
-  /**
-   * Récupère les souvenirs via un lien de partage (lecture seule)
-   */
-  async getSharedMemories(token: string) {
-    const shareLink = await prisma.shareLink.findUnique({
-      where: { token },
-      include: {
-        trip: true,
-      },
-    });
-
-    if (!shareLink) {
-      throw new AppError(404, "Lien de partage non trouvé");
-    }
-
-    // Vérifier le scope
-    if (shareLink.scope !== "memories:read") {
-      throw new AppError(403, "Scope non autorisé");
-    }
-
-    // Récupérer les souvenirs
-    const memories = await prisma.memory.findMany({
-      where: { tripId: shareLink.tripId },
-      include: {
-        media: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    return {
-      trip: {
-        id: shareLink.trip.id,
-        title: shareLink.trip.title,
-      },
-      memories,
     };
   },
 

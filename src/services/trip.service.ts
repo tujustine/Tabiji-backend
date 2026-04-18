@@ -1,6 +1,11 @@
 import prisma from "../config/prisma";
 import type { Prisma } from "../generated/prisma/client";
-import type { PlaceData, TodoItem, DaySchedule, Trip } from "../generated/prisma/client";
+import type {
+  PlaceData,
+  TodoItem,
+  DaySchedule,
+  Trip,
+} from "../generated/prisma/client";
 import { AppError } from "../utils/error.util";
 import type { CreateTripInput, UpdateTripInput } from "../schemas/trip.schema";
 
@@ -74,12 +79,20 @@ export const tripService = {
       },
     });
 
-    return trips.map((trip: Trip & { places: PlaceData[]; todoItems: TodoItem[]; daySchedules: DaySchedule[] }) => ({
-      ...trip,
-      places: trip.places,
-      todoItems: trip.todoItems || [],
-      daySchedule: trip.daySchedules || [],
-    }));
+    return trips.map(
+      (
+        trip: Trip & {
+          places: PlaceData[];
+          todoItems: TodoItem[];
+          daySchedules: DaySchedule[];
+        },
+      ) => ({
+        ...trip,
+        places: trip.places,
+        todoItems: trip.todoItems || [],
+        daySchedule: trip.daySchedules || [],
+      }),
+    );
   },
 
   /**
@@ -142,105 +155,109 @@ export const tripService = {
   async updateTrip(tripId: string, data: UpdateTripInput) {
     const updateData: any = {};
     if (data.title !== undefined) updateData.title = data.title;
-    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
+    if (data.startDate !== undefined)
+      updateData.startDate = new Date(data.startDate);
     if (data.endDate !== undefined) updateData.endDate = new Date(data.endDate);
     if (data.image !== undefined) updateData.image = data.image;
-    if (data.participants !== undefined) updateData.participants = data.participants;
+    if (data.participants !== undefined)
+      updateData.participants = data.participants;
 
     // Utiliser une transaction pour garantir la cohérence
-    const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // Mettre à jour les todoItems
-      if (data.todoItems !== undefined) {
-        await tx.todoItem.deleteMany({
-          where: { tripId },
-        });
-
-        if (data.todoItems.length > 0) {
-          await tx.todoItem.createMany({
-            data: data.todoItems.map((item) => ({
-              tripId,
-              text: item.text || "",
-              completed: item.completed || false,
-              order: item.order || 0,
-            })),
+    const result = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // Mettre à jour les todoItems
+        if (data.todoItems !== undefined) {
+          await tx.todoItem.deleteMany({
+            where: { tripId },
           });
-        }
-      }
 
-      // Traiter les places en premier pour créer le mapping des IDs
-      let oldToNewIdMap = new Map<string, string>();
-      if (data.places !== undefined) {
-        await tx.placeData.deleteMany({
-          where: { tripId },
-        });
-
-        const createdPlaces: any[] = [];
-        if (data.places.length > 0) {
-          for (const placeData of data.places) {
-            const createdPlace = await tx.placeData.create({
-              data: {
+          if (data.todoItems.length > 0) {
+            await tx.todoItem.createMany({
+              data: data.todoItems.map((item) => ({
                 tripId,
-                name: placeData.name || "",
-                address: placeData.address || "",
-                coordinates: placeData.coordinates,
-                category: placeData.category,
-                description: placeData.description,
-              },
+                text: item.text || "",
+                completed: item.completed || false,
+                order: item.order || 0,
+              })),
             });
-            createdPlaces.push(createdPlace);
           }
         }
 
-        // Créer une map des anciens IDs vers les nouveaux IDs
-        data.places.forEach((placeData, index) => {
-          if (placeData.id && createdPlaces[index]) {
-            oldToNewIdMap.set(placeData.id, createdPlaces[index].id);
+        // Traiter les places en premier pour créer le mapping des IDs
+        let oldToNewIdMap = new Map<string, string>();
+        if (data.places !== undefined) {
+          await tx.placeData.deleteMany({
+            where: { tripId },
+          });
+
+          const createdPlaces: any[] = [];
+          if (data.places.length > 0) {
+            for (const placeData of data.places) {
+              const createdPlace = await tx.placeData.create({
+                data: {
+                  tripId,
+                  name: placeData.name || "",
+                  address: placeData.address || "",
+                  coordinates: placeData.coordinates,
+                  category: placeData.category,
+                  description: placeData.description,
+                },
+              });
+              createdPlaces.push(createdPlace);
+            }
           }
-        });
-      }
 
-      // Mettre à jour le planning journalier en utilisant le mapping des places
-      if (data.daySchedule !== undefined) {
-        await tx.daySchedule.deleteMany({
-          where: { tripId },
-        });
-
-        if (data.daySchedule.length > 0) {
-          const updatedDaySchedule = data.daySchedule.map((schedule) => ({
-            tripId,
-            day: schedule.day || 1,
-            date: schedule.date ? new Date(schedule.date) : null,
-            placeIds: Array.isArray(schedule.placeIds)
-              ? schedule.placeIds.map((oldId) => {
-                  const newId = oldToNewIdMap.get(oldId) || oldId;
-                  return newId;
-                })
-              : [],
-          }));
-
-          await tx.daySchedule.createMany({
-            data: updatedDaySchedule,
+          // Créer une map des anciens IDs vers les nouveaux IDs
+          data.places.forEach((placeData, index) => {
+            if (placeData.id && createdPlaces[index]) {
+              oldToNewIdMap.set(placeData.id, createdPlaces[index].id);
+            }
           });
         }
-      }
 
-      // Mettre à jour le voyage
-      const trip = await tx.trip.update({
-        where: { id: tripId },
-        data: updateData,
-        include: {
-          owner: {
-            select: {
-              id: true,
-              username: true,
-              email: true,
+        // Mettre à jour le planning journalier en utilisant le mapping des places
+        if (data.daySchedule !== undefined) {
+          await tx.daySchedule.deleteMany({
+            where: { tripId },
+          });
+
+          if (data.daySchedule.length > 0) {
+            const updatedDaySchedule = data.daySchedule.map((schedule) => ({
+              tripId,
+              day: schedule.day || 1,
+              date: schedule.date ? new Date(schedule.date) : null,
+              placeIds: Array.isArray(schedule.placeIds)
+                ? schedule.placeIds.map((oldId) => {
+                    const newId = oldToNewIdMap.get(oldId) || oldId;
+                    return newId;
+                  })
+                : [],
+            }));
+
+            await tx.daySchedule.createMany({
+              data: updatedDaySchedule,
+            });
+          }
+        }
+
+        // Mettre à jour le voyage
+        const trip = await tx.trip.update({
+          where: { id: tripId },
+          data: updateData,
+          include: {
+            owner: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+              },
             },
           },
-        },
-      });
+        });
 
-      return trip;
-    });
+        return trip;
+      },
+    );
 
     return result;
   },

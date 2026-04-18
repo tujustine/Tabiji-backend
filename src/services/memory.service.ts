@@ -1,6 +1,9 @@
 import prisma from "../config/prisma";
 import { AppError } from "../utils/error.util";
-import type { CreateMemoryInput, UpdateMemoryInput } from "../schemas/memory.schema";
+import type {
+  CreateMemoryInput,
+  UpdateMemoryInput,
+} from "../schemas/memory.schema";
 
 export const memoryService = {
   /**

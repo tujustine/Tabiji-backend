@@ -28,14 +28,6 @@ export const shareController = {
   }),
 
   /**
-   * Récupère les souvenirs via un lien de partage
-   */
-  getSharedMemories: asyncHandler(async (req: Request, res: Response) => {
-    const result = await shareService.getSharedMemories(req.params.token);
-    res.status(200).json(result);
-  }),
-
-  /**
    * Utilise un lien de partage pour rejoindre un voyage
    */
   joinTripViaShareLink: asyncHandler(async (req: Request, res: Response) => {

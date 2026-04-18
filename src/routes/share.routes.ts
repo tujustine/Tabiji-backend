@@ -29,13 +29,6 @@ router.get(
   shareController.getShareLinkInfo
 );
 
-// Récupérer les souvenirs via un lien de partage (lecture seule)
-router.get(
-  "/share/:token/memories",
-  validateParams(shareTokenParamsSchema),
-  shareController.getSharedMemories
-);
-
 // Utiliser un lien de partage (ajouter le voyage aux voyages de l'utilisateur)
 router.post(
   "/share/:token/join",
