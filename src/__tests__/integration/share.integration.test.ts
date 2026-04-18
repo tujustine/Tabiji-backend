@@ -135,45 +135,6 @@ describe("Share Integration", () => {
     });
   });
 
-  describe("GET /share/:token/memories", () => {
-    it("devrait retourner les souvenirs via le token sans authentification", async () => {
-      const token = await createUserAndGetToken();
-      const tripId = await createTrip(token);
-
-      await request(app)
-        .post(`/trip/${tripId}/memory`)
-        .set("Authorization", `Bearer ${token}`)
-        .send({
-          type: "text",
-          content: "Souvenir partagé",
-          position: { x: 0, y: 0 },
-          size: { width: 100, height: 100 },
-        });
-
-      const createRes = await request(app)
-        .post(`/trip/${tripId}/share`)
-        .set("Authorization", `Bearer ${token}`)
-        .send({ role: "VIEWER" });
-
-      const shareToken = createRes.body.token;
-
-      const response = await request(app).get(`/share/${shareToken}/memories`);
-
-      expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty("trip");
-      expect(response.body).toHaveProperty("memories");
-      expect(Array.isArray(response.body.memories)).toBe(true);
-      expect(response.body.memories.length).toBe(1);
-      expect(response.body.memories[0]).toHaveProperty("content", "Souvenir partagé");
-    });
-
-    it("devrait retourner 404 pour un token invalide", async () => {
-      const response = await request(app).get("/share/token-invalide-xyz/memories");
-
-      expect(response.status).toBe(404);
-    });
-  });
-
   describe("POST /share/:token/join", () => {
     it("devrait ajouter le voyage aux voyages de l'utilisateur via le lien", async () => {
       const tokenOwner = await createUserAndGetToken("owner@test.com", "owner");

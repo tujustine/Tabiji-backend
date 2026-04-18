@@ -107,56 +107,6 @@ describe("shareService (avec mocks)", () => {
     });
   });
 
-  describe("getSharedMemories", () => {
-    it("devrait retourner les souvenirs partagés", async () => {
-      const trip = { id: "trip-1", ownerId: "owner-1", title: "Test Trip" };
-      const shareLink = {
-        id: "share-1",
-        tripId: "trip-1",
-        token: "test-token",
-        role: "VIEWER",
-        scope: "memories:read",
-      };
-      const memory = {
-        id: "memory-1",
-        tripId: "trip-1",
-        type: "text",
-        content: "Test",
-        position: { x: 0, y: 0 },
-        size: { width: 100, height: 100 },
-        zIndex: 0,
-      };
-
-      seedMockData({
-        trips: [trip],
-        shareLinks: [shareLink],
-        memories: [memory],
-      });
-
-      const result = await shareService.getSharedMemories("test-token");
-
-      expect(result).toHaveProperty("trip");
-      expect(result).toHaveProperty("memories");
-      expect(result.memories).toHaveLength(1);
-    });
-
-    it("devrait lancer une erreur si le scope n'est pas autorisé", async () => {
-      const shareLink = {
-        id: "share-1",
-        tripId: "trip-1",
-        token: "test-token",
-        role: "VIEWER",
-        scope: "other:scope",
-      };
-
-      seedMockData({ shareLinks: [shareLink] });
-
-      await expect(
-        shareService.getSharedMemories("test-token")
-      ).rejects.toThrow(AppError);
-    });
-  });
-
   describe("joinTripViaShareLink", () => {
     it("devrait ajouter un utilisateur comme collaborateur", async () => {
       const owner = {

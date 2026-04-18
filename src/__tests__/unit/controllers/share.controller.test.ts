@@ -10,7 +10,6 @@ jest.mock("../../../services/share.service", () => ({
   shareService: {
     createShareLink: jest.fn(),
     getShareLinkInfo: jest.fn(),
-    getSharedMemories: jest.fn(),
     joinTripViaShareLink: jest.fn(),
     getShareLinksByTrip: jest.fn(),
     deleteShareLink: jest.fn(),
@@ -111,30 +110,6 @@ describe("shareController", () => {
       );
 
       expect(shareService.getShareLinkInfo).toHaveBeenCalledWith("test-token");
-      expect(statusSpy).toHaveBeenCalledWith(200);
-      expect(jsonSpy).toHaveBeenCalledWith(mockResult);
-    });
-  });
-
-  describe("getSharedMemories", () => {
-    it("devrait retourner les souvenirs partagés", async () => {
-      const mockResult = {
-        trip: { id: "trip-1", title: "Test Trip" },
-        memories: [],
-      };
-
-      (shareService.getSharedMemories as jest.Mock).mockResolvedValue(
-        mockResult
-      );
-
-      mockReq.params = { token: "test-token" };
-
-      await shareController.getSharedMemories(
-        mockReq as Request,
-        mockRes as Response
-      );
-
-      expect(shareService.getSharedMemories).toHaveBeenCalledWith("test-token");
       expect(statusSpy).toHaveBeenCalledWith(200);
       expect(jsonSpy).toHaveBeenCalledWith(mockResult);
     });
