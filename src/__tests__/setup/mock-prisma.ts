@@ -791,6 +791,19 @@ export const createMockPrisma = () => {
         mockData.placeData.set(id, place);
         return place;
       }),
+      createMany: jest.fn(async (args: any) => {
+        const count = args.data.length;
+        args.data.forEach((data: any) => {
+          const id = data.id || generateId();
+          const place = {
+            id,
+            ...data,
+            createdAt: new Date(),
+          };
+          mockData.placeData.set(id, place);
+        });
+        return { count };
+      }),
       update: jest.fn(async (args: any) => {
         const place = mockData.placeData.get(args.where.id);
         if (!place) return null;

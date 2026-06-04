@@ -182,39 +182,28 @@ export const tripService = {
           }
         }
 
-        // Traiter les places en premier pour créer le mapping des IDs
-        let oldToNewIdMap = new Map<string, string>();
+        // Traiter les places en batch pour garder la transaction courte
         if (data.places !== undefined) {
           await tx.placeData.deleteMany({
             where: { tripId },
           });
 
-          const createdPlaces: any[] = [];
           if (data.places.length > 0) {
-            for (const placeData of data.places) {
-              const createdPlace = await tx.placeData.create({
-                data: {
-                  tripId,
-                  name: placeData.name || "",
-                  address: placeData.address || "",
-                  coordinates: placeData.coordinates,
-                  category: placeData.category,
-                  description: placeData.description,
-                },
-              });
-              createdPlaces.push(createdPlace);
-            }
+            await tx.placeData.createMany({
+              data: data.places.map((placeData, index) => ({
+                id: placeData.id || `${tripId}-place-${Date.now()}-${index}`,
+                tripId,
+                name: placeData.name || "",
+                address: placeData.address || "",
+                coordinates: placeData.coordinates,
+                category: placeData.category,
+                description: placeData.description,
+              })),
+            });
           }
-
-          // Créer une map des anciens IDs vers les nouveaux IDs
-          data.places.forEach((placeData, index) => {
-            if (placeData.id && createdPlaces[index]) {
-              oldToNewIdMap.set(placeData.id, createdPlaces[index].id);
-            }
-          });
         }
 
-        // Mettre à jour le planning journalier en utilisant le mapping des places
+        // Mettre à jour le planning journalier
         if (data.daySchedule !== undefined) {
           await tx.daySchedule.deleteMany({
             where: { tripId },
@@ -225,12 +214,7 @@ export const tripService = {
               tripId,
               day: schedule.day || 1,
               date: schedule.date ? new Date(schedule.date) : null,
-              placeIds: Array.isArray(schedule.placeIds)
-                ? schedule.placeIds.map((oldId) => {
-                    const newId = oldToNewIdMap.get(oldId) || oldId;
-                    return newId;
-                  })
-                : [],
+              placeIds: Array.isArray(schedule.placeIds) ? schedule.placeIds : [],
             }));
 
             await tx.daySchedule.createMany({
@@ -255,6 +239,10 @@ export const tripService = {
         });
 
         return trip;
+      },
+      {
+        maxWait: 10000,
+        timeout: 20000,
       },
     );
 
