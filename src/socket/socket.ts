@@ -1,4 +1,4 @@
-import { Server as SocketIOServer } from "socket.io";
+import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "node:http";
 import prisma from "../config/prisma";
 import { CollaboratorRole } from "../generated/prisma/client";
@@ -15,6 +15,110 @@ export interface SocketAuth {
   shareToken?: string;
 }
 
+const canEditTripDetails = (role: unknown): boolean =>
+  role === "OWNER" ||
+  role === "EDITOR" ||
+  role === CollaboratorRole.EDITOR;
+
+type SocketNext = (err?: Error) => void;
+
+async function attachShareLinkAccess(
+  socket: Socket,
+  shareToken?: string,
+): Promise<string | null> {
+  if (!shareToken) {
+    return "Invalid authentication token";
+  }
+
+  const shareLink = await prisma.shareLink.findUnique({
+    where: { token: shareToken },
+    include: { trip: true },
+  });
+
+  if (!shareLink) {
+    return "Invalid share link";
+  }
+
+  socket.data.user = null;
+  socket.data.shareLink = shareLink;
+  socket.data.tripId = shareLink.tripId;
+  socket.data.role = "VIEWER";
+  return null;
+}
+
+async function attachTripAccess(
+  socket: Socket,
+  userId: string,
+  tripId: string,
+): Promise<string | null> {
+  const trip = await prisma.trip.findUnique({
+    where: { id: tripId },
+    include: {
+      collaborators: {
+        where: { userId },
+      },
+    },
+  });
+
+  if (!trip) {
+    return "Trip not found";
+  }
+
+  if (trip.ownerId === userId) {
+    socket.data.tripId = tripId;
+    socket.data.role = "OWNER";
+    return null;
+  }
+
+  const collaboration = trip.collaborators[0];
+  if (!collaboration) {
+    return "Access denied";
+  }
+
+  socket.data.tripId = tripId;
+  socket.data.role = collaboration.role;
+  return null;
+}
+
+async function authenticateSocket(socket: Socket, next: SocketNext) {
+  try {
+    const auth = socket.handshake.auth as SocketAuth;
+
+    if (!auth.token) {
+      return next(new Error("Authentication token required"));
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { token: auth.token },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+      },
+    });
+
+    if (!user) {
+      const errorMessage = await attachShareLinkAccess(socket, auth.shareToken);
+      return errorMessage ? next(new Error(errorMessage)) : next();
+    }
+
+    socket.data.user = user;
+    socket.data.shareLink = null;
+
+    if (auth.tripId) {
+      const errorMessage = await attachTripAccess(socket, user.id, auth.tripId);
+      if (errorMessage) {
+        return next(new Error(errorMessage));
+      }
+    }
+
+    next();
+  } catch (error) {
+    console.error("Socket authentication error:", error);
+    next(new Error("Authentication failed"));
+  }
+}
+
 export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
   const io = new SocketIOServer(httpServer, {
     cors: {
@@ -25,85 +129,7 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
   });
 
   // Middleware d'authentification
-  io.use(async (socket, next) => {
-    try {
-      const auth = socket.handshake.auth as SocketAuth;
-
-      if (!auth.token) {
-        return next(new Error("Authentication token required"));
-      }
-
-      // Vérifier le token utilisateur
-      const user = await prisma.user.findUnique({
-        where: { token: auth.token },
-        select: {
-          id: true,
-          username: true,
-          email: true,
-        },
-      });
-
-      if (!user) {
-        // Si pas d'utilisateur, vérifier si c'est un lien de partage
-        if (auth.shareToken) {
-          const shareLink = await prisma.shareLink.findUnique({
-            where: { token: auth.shareToken },
-            include: { trip: true },
-          });
-
-          if (!shareLink) {
-            return next(new Error("Invalid share link"));
-          }
-
-          socket.data.user = null;
-          socket.data.shareLink = shareLink;
-          socket.data.tripId = shareLink.tripId;
-          socket.data.role = "VIEWER";
-          return next();
-        }
-
-        return next(new Error("Invalid authentication token"));
-      }
-
-      socket.data.user = user;
-      socket.data.shareLink = null;
-
-      // Si un tripId est fourni, vérifier les permissions
-      if (auth.tripId) {
-        const trip = await prisma.trip.findUnique({
-          where: { id: auth.tripId },
-          include: {
-            collaborators: {
-              where: { userId: user.id },
-            },
-          },
-        });
-
-        if (!trip) {
-          return next(new Error("Trip not found"));
-        }
-
-        // Vérifier si l'utilisateur est propriétaire
-        if (trip.ownerId === user.id) {
-          socket.data.tripId = auth.tripId;
-          socket.data.role = "OWNER";
-        } else {
-          // Vérifier les collaborateurs
-          const collaboration = trip.collaborators[0];
-          if (!collaboration) {
-            return next(new Error("Access denied"));
-          }
-          socket.data.tripId = auth.tripId;
-          socket.data.role = collaboration.role;
-        }
-      }
-
-      next();
-    } catch (error) {
-      console.error("Socket authentication error:", error);
-      next(new Error("Authentication failed"));
-    }
-  });
+  io.use(authenticateSocket);
 
   io.on("connection", (socket) => {
     console.log(`Socket connected: ${socket.id}`);
@@ -193,11 +219,7 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
         }
 
         // Vérifier les permissions (EDITOR ou OWNER)
-        if (
-          socket.data.role !== "OWNER" &&
-          socket.data.role !== "EDITOR" &&
-          socket.data.role !== CollaboratorRole.EDITOR
-        ) {
+        if (!canEditTripDetails(socket.data.role)) {
           socket.emit("error", { message: "Insufficient permissions" });
           return;
         }
@@ -220,11 +242,7 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
           }
 
           // Vérifier les permissions
-          if (
-            socket.data.role !== "OWNER" &&
-            socket.data.role !== "EDITOR" &&
-            socket.data.role !== CollaboratorRole.EDITOR
-          ) {
+          if (!canEditTripDetails(socket.data.role)) {
             socket.emit("error", { message: "Insufficient permissions" });
             return;
           }
@@ -248,11 +266,7 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
         }
 
         // Vérifier les permissions
-        if (
-          socket.data.role !== "OWNER" &&
-          socket.data.role !== "EDITOR" &&
-          socket.data.role !== CollaboratorRole.EDITOR
-        ) {
+        if (!canEditTripDetails(socket.data.role)) {
           socket.emit("error", { message: "Insufficient permissions" });
           return;
         }
@@ -263,6 +277,30 @@ export const initializeSocket = (httpServer: HTTPServer): SocketIOServer => {
         console.error("Error broadcasting memory:delete:", error);
         socket.emit("error", {
           message: "Failed to broadcast memory deletion",
+        });
+      }
+    });
+
+    // Événements légers pour synchroniser la page détail du voyage.
+    // La persistance reste gérée par l'API REST au moment de la sauvegarde.
+    socket.on("trip:details:update", async (data: unknown) => {
+      try {
+        if (!socket.data.tripId) {
+          socket.emit("error", { message: "Not in a trip room" });
+          return;
+        }
+
+        if (!canEditTripDetails(socket.data.role)) {
+          socket.emit("error", { message: "Insufficient permissions" });
+          return;
+        }
+
+        const room = `trip:${socket.data.tripId}`;
+        socket.to(room).emit("trip:details:updated", data);
+      } catch (error) {
+        console.error("Error broadcasting trip:details:update:", error);
+        socket.emit("error", {
+          message: "Failed to broadcast trip details update",
         });
       }
     });
