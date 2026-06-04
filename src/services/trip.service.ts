@@ -1,11 +1,5 @@
 import prisma from "../config/prisma";
 import type { Prisma } from "../generated/prisma/client";
-import type {
-  PlaceData,
-  TodoItem,
-  DaySchedule,
-  Trip,
-} from "../generated/prisma/client";
 import { AppError } from "../utils/error.util";
 import type { CreateTripInput, UpdateTripInput } from "../schemas/trip.schema";
 
@@ -57,7 +51,16 @@ export const tripService = {
       orderBy: {
         createdAt: "desc",
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        endDate: true,
+        image: true,
+        participants: true,
+        ownerId: true,
+        createdAt: true,
+        updatedAt: true,
         owner: {
           select: {
             id: true,
@@ -73,26 +76,22 @@ export const tripService = {
             role: true,
           },
         },
-        places: true,
-        todoItems: true,
-        daySchedules: true,
+        _count: {
+          select: {
+            places: true,
+            todoItems: true,
+            daySchedules: true,
+          },
+        },
       },
     });
 
-    return trips.map(
-      (
-        trip: Trip & {
-          places: PlaceData[];
-          todoItems: TodoItem[];
-          daySchedules: DaySchedule[];
-        },
-      ) => ({
-        ...trip,
-        places: trip.places,
-        todoItems: trip.todoItems || [],
-        daySchedule: trip.daySchedules || [],
-      }),
-    );
+    return trips.map(({ _count, ...trip }) => ({
+      ...trip,
+      placesCount: _count.places,
+      todoItemsCount: _count.todoItems,
+      daySchedulesCount: _count.daySchedules,
+    }));
   },
 
   /**

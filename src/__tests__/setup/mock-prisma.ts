@@ -161,6 +161,63 @@ export const createMockPrisma = () => {
           );
         }
 
+        // Simuler les select
+        if (args.select) {
+          trips = trips.map((trip: any) => {
+            const result: any = {};
+
+            for (const [field, value] of Object.entries(args.select)) {
+              if (value === true) {
+                result[field] = trip[field];
+              }
+            }
+
+            if (args.select.owner) {
+              result.owner = mockData.users.get(trip.ownerId) || null;
+            }
+
+            if (args.select.collaborators) {
+              const userId = args.select.collaborators.where?.userId;
+              result.collaborators = Array.from(
+                mockData.tripCollaborators.values()
+              )
+                .filter(
+                  (c: any) =>
+                    c.tripId === trip.id && (!userId || c.userId === userId)
+                )
+                .map((c: any) => {
+                  if (!args.select.collaborators.select) return c;
+
+                  const selectedCollaborator: any = {};
+                  for (const [field, value] of Object.entries(
+                    args.select.collaborators.select
+                  )) {
+                    if (value === true) {
+                      selectedCollaborator[field] = c[field];
+                    }
+                  }
+                  return selectedCollaborator;
+                });
+            }
+
+            if (args.select._count) {
+              result._count = {
+                places: Array.from(mockData.placeData.values()).filter(
+                  (p: any) => p.tripId === trip.id
+                ).length,
+                todoItems: Array.from(mockData.todoItems.values()).filter(
+                  (t: any) => t.tripId === trip.id
+                ).length,
+                daySchedules: Array.from(mockData.daySchedules.values()).filter(
+                  (d: any) => d.tripId === trip.id
+                ).length,
+              };
+            }
+
+            return result;
+          });
+        }
+
         // Simuler les includes
         if (args.include) {
           trips = trips.map((trip: any) => {

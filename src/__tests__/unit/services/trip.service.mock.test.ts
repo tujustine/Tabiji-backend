@@ -82,12 +82,21 @@ describe("tripService (avec mocks)", () => {
       const trip1 = { id: "trip-1", ownerId: "user-1", title: "Trip 1" };
       const trip2 = { id: "trip-2", ownerId: "user-1", title: "Trip 2" };
 
-      seedMockData({ users: [user], trips: [trip1, trip2] });
+      seedMockData({
+        users: [user],
+        trips: [trip1, trip2],
+        placeData: [
+          { id: "place-1", tripId: "trip-1", name: "Place 1" },
+          { id: "place-2", tripId: "trip-1", name: "Place 2" },
+        ],
+      });
 
       const trips = await tripService.getUserTrips("user-1");
 
       expect(trips).toHaveLength(2);
       expect(trips[0]).toHaveProperty("title");
+      expect(trips[0]).toHaveProperty("placesCount");
+      expect(trips[0]).not.toHaveProperty("places");
     });
 
     it("devrait retourner les voyages où l'utilisateur est collaborateur", async () => {
