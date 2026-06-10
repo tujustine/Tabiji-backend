@@ -3,6 +3,7 @@ import isAuthenticated from "../middlewares/isAuthenticated";
 import { checkTripAccess } from "../middlewares/checkTripAccess";
 import { memoryController } from "../controllers/memory.controller";
 import {
+  batchMemorySchema,
   createMemorySchema,
   updateMemorySchema,
   memoryParamsSchema,
@@ -29,6 +30,16 @@ router.get(
   checkTripAccess(),
   validateParams(tripIdParamsSchema),
   memoryController.getMemoriesByTrip
+);
+
+// Sauvegarder plusieurs souvenirs d'un voyage
+router.put(
+  "/trip/:tripId/memories/batch",
+  isAuthenticated,
+  checkTripAccess("EDITOR"),
+  validateParams(tripIdParamsSchema),
+  validate(batchMemorySchema),
+  memoryController.batchSaveMemories
 );
 
 // Modifier un souvenir

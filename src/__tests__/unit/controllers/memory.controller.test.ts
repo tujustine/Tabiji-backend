@@ -14,6 +14,7 @@ jest.mock("../../../services/memory.service", () => ({
     getMemoryById: jest.fn(),
     checkMemoryPermission: jest.fn(),
     updateMemory: jest.fn(),
+    batchSaveMemories: jest.fn(),
     deleteMemory: jest.fn(),
   },
 }));
@@ -127,6 +128,45 @@ describe("memoryController", () => {
       expect(memoryService.getMemoriesByTrip).toHaveBeenCalledWith("trip-1");
       expect(statusSpy).toHaveBeenCalledWith(200);
       expect(jsonSpy).toHaveBeenCalledWith(mockMemories);
+    });
+  });
+
+  describe("batchSaveMemories", () => {
+    it("devrait sauvegarder plusieurs souvenirs et émettre un événement Socket.IO", async () => {
+      const mockMemories = [
+        {
+          id: "memory-1",
+          tripId: "trip-1",
+          type: "text",
+          content: "Updated",
+          position: { x: 10, y: 20 },
+          size: { width: 30, height: 40 },
+          zIndex: 1,
+        },
+      ];
+
+      (memoryService.batchSaveMemories as jest.Mock).mockResolvedValue(
+        mockMemories
+      );
+
+      mockReq.params = { tripId: "trip-1" };
+      mockReq.body = { memories: mockMemories };
+
+      await memoryController.batchSaveMemories(
+        mockReq as Request,
+        mockRes as Response
+      );
+
+      expect(memoryService.batchSaveMemories).toHaveBeenCalledWith(
+        "trip-1",
+        mockReq.body
+      );
+      expect(statusSpy).toHaveBeenCalledWith(200);
+      expect(jsonSpy).toHaveBeenCalledWith(mockMemories);
+      expect(mockIO.to).toHaveBeenCalledWith("trip:trip-1");
+      expect(mockIO.emit).toHaveBeenCalledWith("memories:batch-updated", {
+        memories: mockMemories,
+      });
     });
   });
 

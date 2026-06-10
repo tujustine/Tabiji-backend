@@ -26,6 +26,7 @@ describe("memoryService (avec mocks)", () => {
     (prisma as any).memory = mockPrisma.memory;
     (prisma as any).trip = mockPrisma.trip;
     (prisma as any).tripCollaborator = mockPrisma.tripCollaborator;
+    (prisma as any).$transaction = mockPrisma.$transaction;
   });
 
   afterEach(() => {
@@ -251,6 +252,58 @@ describe("memoryService (avec mocks)", () => {
 
       expect(result).toHaveProperty("zIndex", 5);
       expect(result).toHaveProperty("content", "Old content");
+    });
+  });
+
+  describe("batchSaveMemories", () => {
+    it("devrait mettre à jour les souvenirs existants et créer les temporaires", async () => {
+      const memory = {
+        id: "memory-1",
+        tripId: "trip-1",
+        type: "text",
+        content: "Old content",
+        position: { x: 0, y: 0 },
+        size: { width: 100, height: 100 },
+        zIndex: 0,
+      };
+
+      seedMockData({ memories: [memory] });
+
+      const result = await memoryService.batchSaveMemories("trip-1", {
+        memories: [
+          {
+            id: "memory-1",
+            type: "text",
+            content: "Updated content",
+            position: { x: 10, y: 20 },
+            size: { width: 30, height: 40 },
+            zIndex: 2,
+          },
+          {
+            id: "temp-1",
+            type: "text",
+            content: "New content",
+            position: { x: 50, y: 60 },
+            size: { width: 20, height: 15 },
+            zIndex: 3,
+          },
+        ],
+      });
+
+      expect(result).toHaveLength(2);
+      expect(mockPrisma.memory.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "memory-1", tripId: "trip-1" },
+        })
+      );
+      expect(mockPrisma.memory.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            tripId: "trip-1",
+            content: "New content",
+          }),
+        })
+      );
     });
   });
 

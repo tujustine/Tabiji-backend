@@ -29,6 +29,23 @@ export const memoryController = {
   }),
 
   /**
+   * Sauvegarde plusieurs souvenirs d'un voyage en une seule requête
+   */
+  batchSaveMemories: asyncHandler(async (req: Request, res: Response) => {
+    const memories = await memoryService.batchSaveMemories(
+      req.params.tripId,
+      req.body
+    );
+
+    const io = getIO();
+    io.to(`trip:${req.params.tripId}`).emit("memories:batch-updated", {
+      memories,
+    });
+
+    res.status(200).json(memories);
+  }),
+
+  /**
    * Met à jour un souvenir
    */
   updateMemory: asyncHandler(async (req: Request, res: Response) => {

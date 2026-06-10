@@ -1,6 +1,7 @@
 import prisma from "../config/prisma";
 import { AppError } from "../utils/error.util";
 import type {
+  BatchMemoryInput,
   CreateMemoryInput,
   UpdateMemoryInput,
 } from "../schemas/memory.schema";
@@ -106,6 +107,43 @@ export const memoryService = {
     });
 
     return updatedMemory;
+  },
+
+  /**
+   * Sauvegarde plusieurs souvenirs d'un voyage en une seule requête API.
+   */
+  async batchSaveMemories(tripId: string, data: BatchMemoryInput) {
+    await prisma.$transaction(async (tx) => {
+      for (const memory of data.memories) {
+        const memoryData = {
+          type: memory.type,
+          content: memory.content,
+          position: memory.position,
+          size: memory.size,
+          zIndex: memory.zIndex ?? 0,
+        };
+
+        if (memory.id.startsWith("temp-")) {
+          await tx.memory.create({
+            data: {
+              tripId,
+              ...memoryData,
+            },
+          });
+          continue;
+        }
+
+        await tx.memory.updateMany({
+          where: {
+            id: memory.id,
+            tripId,
+          },
+          data: memoryData,
+        });
+      }
+    });
+
+    return this.getMemoriesByTrip(tripId);
   },
 
   /**

@@ -42,6 +42,7 @@ jest.mock("../../../services/memory.service", () => ({
     getMemoryById: jest.fn(),
     checkMemoryPermission: jest.fn(),
     updateMemory: jest.fn(),
+    batchSaveMemories: jest.fn(),
     deleteMemory: jest.fn(),
   },
 }));
@@ -124,6 +125,56 @@ describe("Memory Routes (avec mocks)", () => {
 
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body).toHaveLength(1);
+    });
+  });
+
+  describe("PUT /trip/:tripId/memories/batch", () => {
+    it("devrait sauvegarder plusieurs souvenirs", async () => {
+      const mockMemories = [
+        {
+          id: "memory-1",
+          tripId: "trip-1",
+          type: "text",
+          content: "Updated",
+          position: { x: 10, y: 20 },
+          size: { width: 30, height: 40 },
+          zIndex: 1,
+        },
+      ];
+
+      (memoryService.batchSaveMemories as jest.Mock).mockResolvedValue(
+        mockMemories
+      );
+
+      const response = await request(app)
+        .put("/trip/trip-1/memories/batch")
+        .send({
+          memories: [
+            {
+              id: "memory-1",
+              type: "text",
+              content: "Updated",
+              position: { x: 10, y: 20 },
+              size: { width: 30, height: 40 },
+              zIndex: 1,
+            },
+          ],
+        })
+        .expect(200);
+
+      expect(response.body).toHaveLength(1);
+      expect(memoryService.batchSaveMemories).toHaveBeenCalledWith("trip-1", {
+        memories: [
+          {
+            id: "memory-1",
+            type: "text",
+            content: "Updated",
+            position: { x: 10, y: 20 },
+            size: { width: 30, height: 40 },
+            zIndex: 1,
+          },
+        ],
+      });
     });
   });
 

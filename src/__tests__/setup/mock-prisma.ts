@@ -596,6 +596,21 @@ export const createMockPrisma = () => {
         }
         return updated;
       }),
+      updateMany: jest.fn(async (args: any) => {
+        let count = 0;
+        for (const [key, memory] of mockData.memories.entries()) {
+          const matchesId = !args.where?.id || memory.id === args.where.id;
+          const matchesTrip =
+            !args.where?.tripId || memory.tripId === args.where.tripId;
+
+          if (matchesId && matchesTrip) {
+            const updated = { ...memory, ...args.data, updatedAt: new Date() };
+            mockData.memories.set(key, updated);
+            count++;
+          }
+        }
+        return { count };
+      }),
       delete: jest.fn(async (args: any) => {
         mockData.memories.delete(args.where.id);
         return { id: args.where.id };
